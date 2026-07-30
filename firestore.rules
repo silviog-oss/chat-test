@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Keep this list in sync with src/lib/config.ts and the function origin.
+      function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email in [
+          'diana.o@incfile.com',
+          'silvio.g@incfile.com'
+        ];
+    }
+
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // One attempt per candidate. The document's existence is the "started"
+    // flag; a completed attempt is immutable to the candidate.
+    match /attempts/{uid} {
+      allow read: if isAdmin() || signedInAs(uid);
+
+      // Create ONCE, only for your own uid, only if none exists yet.
+      allow create: if signedInAs(uid)
+        && !exists(/databases/$(database)/documents/attempts/$(uid));
+
+      // Candidate may only advance an in-progress attempt to completed.
+      // A completed attempt can never be reopened by the candidate.
+      allow update: if signedInAs(uid)
+        && resource.data.status == 'in_progress'
+        && request.resource.data.status in ['in_progress', 'completed'];
+
+      allow delete: if isAdmin();
+    }
+
+    // Scored results. Written once, then immutable to the candidate.
+    match /results/{uid} {
+      allow read: if isAdmin() || signedInAs(uid);
+
+      allow create: if signedInAs(uid)
+        && !exists(/databases/$(database)/documents/results/$(uid));
+
+      allow update, delete: if isAdmin();
+    }
+  }
+}
