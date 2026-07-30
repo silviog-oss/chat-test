@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light dark;
-}
-
 html,
 body,
 #root {
@@ -13,24 +9,20 @@ body,
 }
 
 body {
-  @apply font-body bg-paper text-ink antialiased;
+  @apply font-body bg-canvas text-ink antialiased;
 }
 
-.dark body {
-  @apply bg-ink text-paper;
-}
-
-/* Quiet, disciplined scrollbars for the console feel */
+/* Quiet scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a475c transparent;
+  scrollbar-color: #cfd3df transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #3a475c;
+  background: #cfd3df;
   border-radius: 8px;
 }
 
@@ -44,6 +36,6 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #3d82ff;
+  outline: 2px solid #F26522;
   outline-offset: 2px;
 }

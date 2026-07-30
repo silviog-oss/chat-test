@@ -6,7 +6,6 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { useDarkMode } from './hooks/useDarkMode';
 import { Spinner } from './components/ui';
 import Landing from './pages/Landing';
 import Assessment from './pages/Assessment';
@@ -26,25 +25,11 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   return children;
 }
 
-function DarkToggle() {
-  const { dark, toggle } = useDarkMode();
-  return (
-    <button
-      onClick={toggle}
-      title="Toggle theme"
-      className="fixed bottom-4 right-4 z-50 grid h-10 w-10 place-items-center rounded-full border border-line bg-white/80 shadow-lg backdrop-blur dark:bg-slate1/80"
-    >
-      {dark ? '☀' : '☾'}
-    </button>
-  );
-}
-
 export default function App() {
   return (
     <AuthProvider>
       {/* HashRouter avoids GitHub Pages deep-link 404s entirely */}
       <HashRouter>
-        <DarkToggle />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route

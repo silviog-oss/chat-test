@@ -1,16 +1,29 @@
 import { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Priority } from '../lib/types';
 
+// Clickable brand wordmark. Clicking returns to the landing page (there is no
+// separate back button). Shows "Powered by Bizee" beneath, matching bizee.com.
 export function Logo({ className = '' }: { className?: string }) {
+  const nav = useNavigate();
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-white font-display font-bold">
+    <button
+      onClick={() => nav('/')}
+      className={`group flex items-center gap-2.5 ${className}`}
+      aria-label="Chatline home"
+    >
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary font-display text-lg font-bold text-white transition-transform group-hover:scale-105">
         C
-      </div>
-      <span className="font-display text-lg font-bold tracking-tight">
-        Chatline
       </span>
-    </div>
+      <span className="flex flex-col items-start leading-none">
+        <span className="font-display text-lg font-bold tracking-tight lowercase">
+          chatline
+        </span>
+        <span className="text-[10px] font-medium tracking-wide text-muted">
+          powered by <span className="text-primary font-semibold">bizee</span>
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -66,7 +79,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-line bg-white/60 p-4 dark:bg-slate1/60 ${className}`}
+      className={`rounded-2xl border border-line bg-surface p-4 shadow-sm ${className}`}
     >
       {children}
     </div>
@@ -76,7 +89,7 @@ export function Card({
 export function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <Card className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide opacity-60">{label}</span>
+      <span className="text-xs uppercase tracking-wide text-muted">{label}</span>
       <span className="font-display text-2xl font-bold">{value}</span>
     </Card>
   );

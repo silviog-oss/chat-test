@@ -210,22 +210,23 @@ export default function AdminDashboard() {
                       <BarChart data={chartData}>
                         <CartesianGrid
                           strokeDasharray="3 3"
-                          stroke="#2A3648"
+                          stroke="#E6E8EF"
                         />
-                        <XAxis dataKey="name" stroke="#8896a8" fontSize={12} />
+                        <XAxis dataKey="name" stroke="#5B6070" fontSize={12} />
                         <YAxis
                           domain={[0, 100]}
-                          stroke="#8896a8"
+                          stroke="#5B6070"
                           fontSize={12}
                         />
                         <Tooltip
                           contentStyle={{
-                            background: '#141C2B',
-                            border: '1px solid #2A3648',
+                            background: '#FFFFFF',
+                            border: '1px solid #E6E8EF',
                             borderRadius: 8,
+                            color: '#1A1A2E',
                           }}
                         />
-                        <Bar dataKey="score" fill="#2F6FED" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="score" fill="#F26522" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
