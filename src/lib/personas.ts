@@ -40,6 +40,10 @@ export interface CustomerPersona {
   priority: Priority;
   joinAtSeconds: number;
   openingMessage: string;
+  // Reply timing profile: how quickly this customer types back after the
+  // agent replies. 'fast' customers fire back almost immediately (adds
+  // pressure); 'slow' customers take their time.
+  speedProfile: 'fast' | 'normal' | 'slow';
   // Ordered beats: first matching beat wins. A catch-all should be last.
   beats: Beat[];
   // What the customer says if ignored too long.
@@ -47,6 +51,16 @@ export interface CustomerPersona {
   // What the customer says once resolved (used to close out).
   closeLine: string;
 }
+
+// Reply delay ranges in milliseconds, per speed profile.
+export const SPEED_DELAYS: Record<
+  CustomerPersona['speedProfile'],
+  { min: number; max: number }
+> = {
+  fast: { min: 400, max: 1200 },
+  normal: { min: 1200, max: 2600 },
+  slow: { min: 3000, max: 6000 },
+};
 
 export const initialCustomerState = (): CustomerState => ({
   step: 0,
@@ -69,6 +83,7 @@ export const PERSONAS: CustomerPersona[] = [
     joinAtSeconds: 0,
     openingMessage:
       'I ordered yesterday but never received my confirmation email.',
+    speedProfile: 'normal',
     beats: [
       {
         match: (s, st) => !st.gotIdentifier && s.askedIdentifier,
@@ -108,6 +123,7 @@ export const PERSONAS: CustomerPersona[] = [
     priority: 'low',
     joinAtSeconds: 0,
     openingMessage: 'My password reset link says it expired.',
+    speedProfile: 'slow',
     beats: [
       {
         match: (_s, st) => st.step >= 1,
@@ -132,6 +148,7 @@ export const PERSONAS: CustomerPersona[] = [
     priority: 'high',
     joinAtSeconds: 0,
     openingMessage: "I'm being charged twice on my credit card.",
+    speedProfile: 'fast',
     beats: [
       {
         // If the agent promises an instant refund with no policy/timeframe,
@@ -187,6 +204,7 @@ export const PERSONAS: CustomerPersona[] = [
     joinAtSeconds: 7 * 60,
     openingMessage:
       'Hi, I need help right now — my account is locked and I have a client call in 10 minutes.',
+    speedProfile: 'fast',
     beats: [
       {
         match: (_s, st) => !st.gotIdentifier,

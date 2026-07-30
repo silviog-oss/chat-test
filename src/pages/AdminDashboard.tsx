@@ -258,6 +258,12 @@ export default function AdminDashboard() {
                         <th className="p-3">Email</th>
                         <th className="p-3">Date</th>
                         <th className="p-3">WPM</th>
+                        <th className="p-3" title="Response time /20">Resp</th>
+                        <th className="p-3" title="Grammar /10">Gram</th>
+                        <th className="p-3" title="Professional tone /15">Tone</th>
+                        <th className="p-3" title="Accuracy /20">Acc</th>
+                        <th className="p-3" title="Conversation management /20">Conv</th>
+                        <th className="p-3" title="Prioritization /15">Prio</th>
                         <th className="p-3">Overall</th>
                         <th className="p-3">Result</th>
                         <th className="p-3"></th>
@@ -275,7 +281,13 @@ export default function AdminDashboard() {
                             {new Date(r.dateTaken).toLocaleDateString()}
                           </td>
                           <td className="p-3 font-mono">{r.typing.wpm}</td>
-                          <td className="p-3 font-mono">{r.overall}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.responseTime}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.grammar}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.professionalTone}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.accuracy}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.conversationManagement}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.prioritization}</td>
+                          <td className="p-3 font-mono font-semibold">{r.overall}</td>
                           <td className="p-3">
                             <span
                               className={

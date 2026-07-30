@@ -46,8 +46,14 @@ export function scoreAssessment(input: ScoreInput): ScoreResult {
       ? responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length
       : 120000;
   const avgSec = avgMs / 1000;
-  const responseTime =
-    totalAgentMsgs === 0 ? 0 : Math.round(clamp(20 - (avgSec - 15) * (20 / 105), 0, 20));
+  const baseResponse =
+    totalAgentMsgs === 0 ? 0 : clamp(20 - (avgSec - 15) * (20 / 105), 0, 20);
+
+  // 4-minute rule: every reply that took longer than 4 minutes costs a flat
+  // 3 points, deducted from Response Time and floored at 0.
+  const FOUR_MIN_MS = 4 * 60 * 1000;
+  const lateReplies = responseTimesMs.filter((ms) => ms > FOUR_MIN_MS).length;
+  const responseTime = Math.round(clamp(baseResponse - lateReplies * 3, 0, 20));
 
   // ---- Grammar (/10) ------------------------------------------------------
   // Capitalization, sentence-ending punctuation, and non-trivial length.
@@ -173,13 +179,13 @@ export function scoreAssessment(input: ScoreInput): ScoreResult {
       conversationManagement >= 14
         ? 'Kept multiple chats moving and drove several to resolution.'
         : 'Some conversations were left unattended or unresolved.',
-    summary: buildSummary(categories),
+    summary: buildSummary(categories, lateReplies),
   };
 
   return { categories, feedback };
 }
 
-function buildSummary(c: CategoryScores): string {
+function buildSummary(c: CategoryScores, lateReplies: number): string {
   const total =
     c.responseTime +
     c.grammar +
@@ -205,5 +211,9 @@ function buildSummary(c: CategoryScores): string {
       ['prioritization', c.prioritization / 15],
     ] as [string, number][]
   ).sort((a, b) => a[1] - b[1])[0][0];
-  return `Overall ${total}/100 — ${band}. Weakest area was ${weakest}; focus coaching there. Scores are computed from measured response times and rule-based checks on the transcript.`;
+  const lateNote =
+    lateReplies > 0
+      ? ` Note: ${lateReplies} repl${lateReplies === 1 ? 'y' : 'ies'} exceeded the 4-minute limit (−${lateReplies * 3} to response time).`
+      : '';
+  return `Overall ${total}/100 — ${band}. Weakest area was ${weakest}; focus coaching there.${lateNote} Scores are computed from measured response times and rule-based checks on the transcript.`;
 }

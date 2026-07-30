@@ -2,21 +2,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getMyResult } from '../lib/data';
-import { AssessmentResult } from '../lib/types';
 import { Logo, Spinner } from '../components/ui';
-import ScoreReport from '../components/ScoreReport';
 
+// Candidates do NOT see their scores, feedback, or transcript. Once they have
+// completed the assessment, they simply see a confirmation that it was
+// submitted. All evaluation is visible to admins only.
 export default function CandidateDashboard() {
   const { user, signOut } = useAuth();
   const nav = useNavigate();
-  const [result, setResult] = useState<AssessmentResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [submitted, setSubmitted] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!user) return;
     getMyResult(user.uid)
-      .then(setResult)
-      .finally(() => setLoading(false));
+      .then((r) => setSubmitted(!!r))
+      .catch(() => setSubmitted(false));
   }, [user]);
 
   return (
@@ -34,18 +34,27 @@ export default function CandidateDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-8">
-        <h1 className="mb-6 font-display text-3xl font-bold">Your results</h1>
-        {loading ? (
+      <main className="mx-auto max-w-xl px-6 py-16">
+        {submitted === null ? (
           <Spinner label="Loading…" />
-        ) : result ? (
-          <ScoreReport r={result} />
+        ) : submitted ? (
+          <div className="rounded-xl border border-line p-10 text-center">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-good/15 text-good text-2xl">
+              ✓
+            </div>
+            <h1 className="font-display text-2xl font-bold">Submitted</h1>
+            <p className="mt-2 opacity-70">
+              Your assessment has been submitted. Thank you for completing it.
+            </p>
+          </div>
         ) : (
-          <div className="rounded-xl border border-line p-8 text-center">
-            <p className="opacity-70">You haven't completed the assessment yet.</p>
+          <div className="rounded-xl border border-line p-10 text-center">
+            <h1 className="font-display text-2xl font-bold">
+              You haven't completed the assessment yet
+            </h1>
             <button
               onClick={() => nav('/assessment')}
-              className="mt-4 rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primarySoft"
+              className="mt-6 rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primarySoft"
             >
               Start assessment
             </button>

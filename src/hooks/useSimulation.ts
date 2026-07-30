@@ -7,6 +7,7 @@ import {
   initialCustomerState,
   detectSignals,
   ReplySignals,
+  SPEED_DELAYS,
 } from '../lib/personas';
 import { ChatTurn } from '../lib/types';
 
@@ -169,8 +170,11 @@ export function useSimulation(active: boolean) {
       };
     });
 
-    // Customer reacts (unless already resolved).
+    // Customer reacts (unless already resolved), timed by their speed profile.
     const signals = detectSignals(text);
+    const persona = PERSONAS.find((p) => p.id === personaId)!;
+    const { min, max } = SPEED_DELAYS[persona.speedProfile];
+    const delay = min + Math.random() * (max - min);
     setTimeout(() => {
       setConvos((prev) => {
         const c = prev[personaId];
@@ -189,7 +193,7 @@ export function useSimulation(active: boolean) {
           },
         };
       });
-    }, 800 + Math.random() * 1400);
+    }, delay);
   }, []);
 
   const markRead = useCallback((personaId: string) => {
