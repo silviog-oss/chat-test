@@ -5,8 +5,8 @@
 // changes the UI; it does not grant real access on its own. Keep this list in
 // sync with firestore.rules.
 export const ADMIN_EMAILS: string[] = [
-  'diana.o@incfile.com',
-  'silvio.g@incfile.com',
+  'admin@yourcompany.com',
+  // 'second.admin@yourcompany.com',
 ];
 
 export const PASS_THRESHOLDS = {
@@ -16,7 +16,7 @@ export const PASS_THRESHOLDS = {
 };
 
 export const DURATIONS = {
-  typingSeconds: 5 * 60,
+  typingSeconds: 1 * 60,
   chatSeconds: 15 * 60,
 };
 

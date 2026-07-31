@@ -3,10 +3,7 @@ import {
   PERSONAS,
   TIMED_EVENTS,
   CustomerPersona,
-  CustomerState,
-  initialCustomerState,
   detectSignals,
-  ReplySignals,
   SPEED_DELAYS,
 } from '../lib/personas';
 import { ChatTurn } from '../lib/types';
@@ -18,26 +15,14 @@ export interface Conversation {
   unread: number;
   resolved: boolean;
   typing: boolean;
-  state: CustomerState;
+  stepIndex: number; // which scenario step we're waiting on
+  frustration: number; // impatience escalation counter
+  lastActivityTs: number; // last message either side, for impatience timing
 }
 
 export interface SupervisorNote {
   text: string;
   ts: number;
-}
-
-const SUPERVISOR_ACTIVE_AFTER = 5 * 60;
-
-// Pick the customer's next line from its branching beats, given the agent's
-// latest signals. First matching beat wins; falls back to the last beat.
-function nextBeat(persona: CustomerPersona, signals: ReplySignals, state: CustomerState) {
-  const beat =
-    persona.beats.find((b) => b.match(signals, state)) ??
-    persona.beats[persona.beats.length - 1];
-  beat.effect?.(state);
-  state.step += 1;
-  const say = typeof beat.say === 'function' ? beat.say(state) : beat.say;
-  return say;
 }
 
 export function useSimulation(active: boolean) {
@@ -55,7 +40,9 @@ export function useSimulation(active: boolean) {
         unread: joinedNow ? 1 : 0,
         resolved: false,
         typing: false,
-        state: initialCustomerState(),
+        stepIndex: 0,
+        frustration: 0,
+        lastActivityTs: Date.now(),
       };
     }
     return init;
@@ -71,7 +58,7 @@ export function useSimulation(active: boolean) {
     []
   );
 
-  // -- Scheduler: joins + timed supervisor events ---------------------------
+  // -- Scheduler: joins + timed supervisor events --------------------------
   useEffect(() => {
     if (!active) return;
     const iv = setInterval(() => {
@@ -86,6 +73,7 @@ export function useSimulation(active: boolean) {
               joined: true,
               turns: [{ role: 'customer', text: p.openingMessage, ts: Date.now() }],
               unread: 1,
+              lastActivityTs: Date.now(),
             };
             changed = true;
           }
@@ -102,49 +90,59 @@ export function useSimulation(active: boolean) {
     return () => clearInterval(iv);
   }, [active, elapsed]);
 
-  // -- Ignored-customer nudges ---------------------------------------------
+  // -- Impatience: nudge / escalate on agent silence -----------------------
   useEffect(() => {
     if (!active) return;
     const iv = setInterval(() => {
       const snapshot = convos;
       for (const [id, c] of Object.entries(snapshot)) {
         if (!c.joined || c.resolved || busy.current.has(id)) continue;
+        const imp = c.persona.impatient;
+        if (!imp) continue;
+        // Only nudge if the customer is the one waiting (last msg is theirs).
         const last = c.turns[c.turns.length - 1];
         if (!last || last.role !== 'customer') continue;
-        const since = (Date.now() - last.ts) / 1000;
-        // Dana bails early if ignored; others get impatient.
-        const threshold = id === 'customer-b' ? 90 : 100;
-        if (since > threshold && Math.random() < 0.5) {
-          nudge(id);
+        const silent = (Date.now() - c.lastActivityTs) / 1000;
+        // Escalation threshold first (angrier), then plain nudge.
+        if (silent >= imp.escalateAfterSeconds) {
+          emitImpatience(id, true);
+        } else if (silent >= imp.nudgeAfterSeconds && c.frustration === 0) {
+          emitImpatience(id, false);
         }
       }
-    }, 5000);
+    }, 3000);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, convos]);
 
-  function nudge(personaId: string) {
+  function emitImpatience(personaId: string, escalate: boolean) {
     if (busy.current.has(personaId)) return;
     busy.current.add(personaId);
     setConvos((prev) => {
       const c = prev[personaId];
-      const line = c.persona.impatientLine(c.state);
-      // Dana's impatient line means she gives up.
-      const resolves = personaId === 'customer-b';
-      const newState = { ...c.state };
-      if (resolves) newState.resolved = true;
+      const imp = c.persona.impatient!;
+      let line: string;
+      let frustration = c.frustration;
+      if (escalate) {
+        const idx = Math.min(frustration, imp.angryLines.length - 1);
+        line = imp.angryLines[idx];
+        frustration = Math.min(frustration + 1, imp.angryLines.length);
+      } else {
+        line = imp.nudgeLine;
+        frustration = Math.max(frustration, 1);
+      }
+      busy.current.delete(personaId);
       return {
         ...prev,
         [personaId]: {
           ...c,
-          resolved: c.resolved || resolves,
-          state: newState,
+          frustration,
           turns: [...c.turns, { role: 'customer', text: line, ts: Date.now() }],
           unread: c.unread + 1,
+          lastActivityTs: Date.now(),
         },
       };
     });
-    busy.current.delete(personaId);
   }
 
   // -- Candidate sends a message -------------------------------------------
@@ -154,6 +152,7 @@ export function useSimulation(active: boolean) {
       firstReplyOrder.current.push(personaId);
     }
 
+    // Record the agent turn + response time immediately.
     setConvos((prev) => {
       const c = prev[personaId];
       const lastCustomer = [...c.turns].reverse().find((t) => t.role === 'customer');
@@ -166,30 +165,56 @@ export function useSimulation(active: boolean) {
           ...c,
           turns: [...c.turns, { role: 'agent', text, ts: now }],
           typing: !c.resolved,
+          frustration: 0, // agent replied; reset impatience
+          lastActivityTs: now,
         },
       };
     });
 
-    // Customer reacts (unless already resolved), timed by their speed profile.
     const signals = detectSignals(text);
     const persona = PERSONAS.find((p) => p.id === personaId)!;
     const { min, max } = SPEED_DELAYS[persona.speedProfile];
     const delay = min + Math.random() * (max - min);
+
     setTimeout(() => {
       setConvos((prev) => {
         const c = prev[personaId];
         if (c.resolved) return { ...prev, [personaId]: { ...c, typing: false } };
-        const state = { ...c.state };
-        const line = nextBeat(c.persona, signals, state);
+
+        const steps = c.persona.steps;
+        const current = steps[c.stepIndex];
+        let reply: string;
+        let nextStep = c.stepIndex;
+        let resolved = false;
+
+        if (current && current.advance(signals)) {
+          // Agent satisfied this step -> customer advances and says the line.
+          reply = current.onAdvance;
+          nextStep = c.stepIndex + 1;
+          if (nextStep >= steps.length) resolved = true;
+        } else if (current) {
+          // Not satisfied -> gentle re-prompt (never a random wrong line).
+          reply = current.nudge;
+        } else {
+          // No steps left; treat as resolved.
+          reply = '';
+          resolved = true;
+        }
+
+        const turns = reply
+          ? [...c.turns, { role: 'customer' as const, text: reply, ts: Date.now() }]
+          : c.turns;
+
         return {
           ...prev,
           [personaId]: {
             ...c,
             typing: false,
-            state,
-            resolved: state.resolved,
-            turns: [...c.turns, { role: 'customer', text: line, ts: Date.now() }],
-            unread: c.unread + 1,
+            stepIndex: nextStep,
+            resolved,
+            turns,
+            unread: reply ? c.unread + 1 : c.unread,
+            lastActivityTs: Date.now(),
           },
         };
       });
