@@ -81,42 +81,74 @@ export function scoreAssessment(input: ScoreInput): ScoreResult {
   // ---- Professional tone (/15) -------------------------------------------
   const anyGreeted = agentText.some((m) => detectSignals(m).greeted);
   const anyEmpathy = agentText.some((m) => detectSignals(m).empathy);
-  const anyApology = agentText.some((m) => detectSignals(m).apologized);
   const anyClosing = agentText.some((m) => detectSignals(m).closing);
   const noAllCaps = !agentText.some((m) => m.length > 4 && m === m.toUpperCase());
   let tone = 0;
-  tone += anyGreeted ? 4 : 0;
-  tone += anyEmpathy ? 4 : 0;
-  tone += anyApology ? 3 : 0;
-  tone += anyClosing ? 2 : 0;
+  tone += anyGreeted ? 5 : 0;
+  tone += anyEmpathy ? 5 : 0;
+  tone += anyClosing ? 3 : 0;
   tone += noAllCaps ? 2 : 0;
   const professionalTone = Math.round(clamp(tone, 0, 15));
 
   // ---- Accuracy (/20) -----------------------------------------------------
-  // Key correctness signals: asked for an identifier before "resolving", and
-  // handled the refund policy correctly on the double-charge customer.
-  const askedIdentifier = agentText.some((m) => detectSignals(m).askedIdentifier);
-  const refundTranscript = transcripts.find((t) => t.personaId === 'customer-c');
-  let refundHandledWell = true;
-  let promisedInstant = false;
-  if (refundTranscript) {
-    const rAgent = refundTranscript.turns
-      .filter((x) => x.role === 'agent')
-      .map((x) => x.text);
-    promisedInstant = rAgent.some(
-      (m) =>
-        detectSignals(m).promisedInstantRefund &&
-        !detectSignals(m).mentionedRefundPolicy
-    );
-    const acknowledgedPolicy = rAgent.some(
-      (m) => detectSignals(m).mentionedRefundPolicy || detectSignals(m).gaveTimeframe
-    );
-    refundHandledWell = acknowledgedPolicy && !promisedInstant;
+  // For the Bizee scenarios, "accuracy" weights three things equally:
+  //   (a) verifying the account before helping,
+  //   (b) giving correct, policy-compliant information for each ticket,
+  //   (c) proper escalation and/or clean close-out wording.
+  const allAgent = agentText;
+  const sig = (arr: string[], pred: (s: ReturnType<typeof detectSignals>) => boolean) =>
+    arr.some((m) => pred(detectSignals(m)));
+
+  // (a) Verification — asked for order # + last 4 / card on file.
+  const didVerify = sig(allAgent, (s) => s.askedVerification);
+
+  // (b) Correct policy info, per scenario present in the transcripts.
+  const has = (id: string) => transcripts.some((t) => t.personaId === id);
+  const agentFor = (id: string) =>
+    transcripts
+      .find((t) => t.personaId === id)
+      ?.turns.filter((x) => x.role === 'agent')
+      .map((x) => x.text) ?? [];
+
+  let policyChecks = 0;
+  let policyHits = 0;
+  if (has('ein')) {
+    policyChecks++;
+    // EIN retry must mention escalation/timeframe AND the SSN duplicate risk.
+    const a = agentFor('ein');
+    const okEscalate = a.some((m) => detectSignals(m).mentionedEscalation || detectSignals(m).gaveTimeframe);
+    const okRisk = a.some((m) => detectSignals(m).askedSsnRisk);
+    if (okEscalate && okRisk) policyHits++;
+    else if (okEscalate || okRisk) policyHits += 0.5;
   }
+  if (has('fees')) {
+    policyChecks++;
+    const a = agentFor('fees');
+    const okFees = a.some((m) => detectSignals(m).mentionedFees);
+    const okBanksTax = a.some(
+      (m) => detectSignals(m).mentionedBanks || detectSignals(m).mentionedVyde
+    );
+    if (okFees && okBanksTax) policyHits++;
+    else if (okFees || okBanksTax) policyHits += 0.5;
+  }
+  if (has('members')) {
+    policyChecks++;
+    const a = agentFor('members');
+    const okWyoming = a.some((m) => detectSignals(m).mentionedWyoming);
+    const okEmail = a.some((m) => detectSignals(m).mentionedEmail);
+    if (okWyoming && okEmail) policyHits++;
+    else if (okWyoming || okEmail) policyHits += 0.5;
+  }
+  const policyRatio = policyChecks ? policyHits / policyChecks : 0;
+
+  // (c) Proper close-out / escalation wording somewhere.
+  const didClose = sig(allAgent, (s) => s.closing || s.mentionedEscalation);
+
+  // Weight the three parts equally within the 20 points.
   let accuracy = 0;
-  accuracy += askedIdentifier ? 8 : 0;
-  accuracy += refundHandledWell ? 8 : 0;
-  accuracy += promisedInstant ? 0 : 4; // penalty for the policy trap
+  accuracy += didVerify ? 20 / 3 : 0;
+  accuracy += policyRatio * (20 / 3);
+  accuracy += didClose ? 20 / 3 : 0;
   const accuracyScore = Math.round(clamp(accuracy, 0, 20));
 
   // ---- Conversation management (/20) -------------------------------------
@@ -167,14 +199,15 @@ export function scoreAssessment(input: ScoreInput): ScoreResult {
     empathy: anyEmpathy
       ? 'Acknowledged customer frustration and showed understanding.'
       : 'Little explicit empathy shown; acknowledging how the customer feels would help.',
-    problemSolving: askedIdentifier
-      ? 'Gathered identifying details before acting, which is the right instinct.'
-      : 'Jumped toward resolutions without collecting identifying details first.',
-    accuracy: refundHandledWell
-      ? 'Handled the double-charge correctly, respecting the refund-approval policy.'
-      : promisedInstant
-        ? 'Promised an immediate large refund without noting the supervisor-approval policy — a factual/policy error.'
-        : 'Refund handling was incomplete; no clear policy reference or timeframe was given.',
+    problemSolving: didVerify
+      ? 'Verified the account before acting, which is the right instinct.'
+      : 'Did not verify the account (order # + last 4 digits) before proceeding.',
+    accuracy:
+      policyRatio >= 0.99
+        ? 'Gave correct, policy-compliant information across the tickets handled.'
+        : policyRatio >= 0.5
+          ? 'Partially correct — some ticket answers missed a required policy point (e.g. SSN duplicate-filing risk, Vyde tax consult, or the Wyoming member rule).'
+          : 'Policy answers were largely incorrect or incomplete for the tickets handled.',
     conversationManagement:
       conversationManagement >= 14
         ? 'Kept multiple chats moving and drove several to resolution.'
