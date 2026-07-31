@@ -3,12 +3,12 @@ import { AssessmentResult } from '../lib/types';
 import { Card, Stat, Avatar } from './ui';
 
 const CAT_META: { key: keyof AssessmentResult['categories']; label: string; max: number }[] = [
-  { key: 'responseTime', label: 'Response time', max: 20 },
-  { key: 'grammar', label: 'Grammar', max: 10 },
-  { key: 'professionalTone', label: 'Professional tone', max: 15 },
-  { key: 'accuracy', label: 'Accuracy', max: 20 },
-  { key: 'conversationManagement', label: 'Conversation mgmt', max: 20 },
-  { key: 'prioritization', label: 'Prioritization', max: 15 },
+  { key: 'grammar', label: 'Grammar', max: 17 },
+  { key: 'typingSpeed', label: 'Typing speed', max: 17 },
+  { key: 'responseSpeed', label: 'Response speed', max: 17 },
+  { key: 'professionalism', label: 'Professionalism', max: 17 },
+  { key: 'tone', label: 'Tone', max: 16 },
+  { key: 'empathy', label: 'Empathy', max: 16 },
 ];
 
 export default function ScoreReport({
@@ -85,18 +85,15 @@ export default function ScoreReport({
       </Card>
 
       <Card>
-        <h3 className="mb-3 font-display font-bold">AI feedback</h3>
+        <h3 className="mb-3 font-display font-bold">Feedback</h3>
         <div className="space-y-3 text-sm">
           <Fb label="Summary" text={r.aiFeedback.summary} highlight />
-          <Fb label="Professionalism" text={r.aiFeedback.professionalism} />
           <Fb label="Grammar" text={r.aiFeedback.grammar} />
+          <Fb label="Typing speed" text={r.aiFeedback.typingSpeed} />
+          <Fb label="Response speed" text={r.aiFeedback.responseSpeed} />
+          <Fb label="Professionalism" text={r.aiFeedback.professionalism} />
+          <Fb label="Tone" text={r.aiFeedback.tone} />
           <Fb label="Empathy" text={r.aiFeedback.empathy} />
-          <Fb label="Problem-solving" text={r.aiFeedback.problemSolving} />
-          <Fb label="Accuracy" text={r.aiFeedback.accuracy} />
-          <Fb
-            label="Conversation management"
-            text={r.aiFeedback.conversationManagement}
-          />
         </div>
       </Card>
 

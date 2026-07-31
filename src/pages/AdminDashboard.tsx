@@ -78,14 +78,17 @@ export default function AdminDashboard() {
       'Date',
       'Overall',
       'WPM',
-      'Accuracy',
-      'ResponseTime',
+      'TypingAccuracy',
       'Grammar',
-      'ProfessionalTone',
-      'AccuracyScore',
-      'ConversationMgmt',
-      'Prioritization',
-      'Passed',
+      'TypingSpeed',
+      'ResponseSpeed',
+      'Professionalism',
+      'Tone',
+      'Empathy',
+      'AutoResult',
+      'ManualScore',
+      'ManualVerdict',
+      'ManualNotes',
     ];
     const lines = filtered.map((r) =>
       [
@@ -95,13 +98,16 @@ export default function AdminDashboard() {
         r.overall,
         r.typing.wpm,
         r.typing.accuracy,
-        r.categories.responseTime,
         r.categories.grammar,
-        r.categories.professionalTone,
-        r.categories.accuracy,
-        r.categories.conversationManagement,
-        r.categories.prioritization,
+        r.categories.typingSpeed,
+        r.categories.responseSpeed,
+        r.categories.professionalism,
+        r.categories.tone,
+        r.categories.empathy,
         r.passed ? 'PASS' : 'FAIL',
+        r.manualScore ?? '',
+        r.manualVerdict ?? '',
+        r.manualNotes ?? '',
       ]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(',')
@@ -274,12 +280,12 @@ export default function AdminDashboard() {
                         <th className="p-3">Email</th>
                         <th className="p-3">Date</th>
                         <th className="p-3">WPM</th>
-                        <th className="p-3" title="Response time /20">Resp</th>
-                        <th className="p-3" title="Grammar /10">Gram</th>
-                        <th className="p-3" title="Professional tone /15">Tone</th>
-                        <th className="p-3" title="Accuracy /20">Acc</th>
-                        <th className="p-3" title="Conversation management /20">Conv</th>
-                        <th className="p-3" title="Prioritization /15">Prio</th>
+                        <th className="p-3" title="Grammar /17">Gram</th>
+                        <th className="p-3" title="Typing speed /17">Type</th>
+                        <th className="p-3" title="Response speed /17">Resp</th>
+                        <th className="p-3" title="Professionalism /17">Prof</th>
+                        <th className="p-3" title="Tone /16">Tone</th>
+                        <th className="p-3" title="Empathy /16">Emp</th>
                         <th className="p-3">Overall</th>
                         <th className="p-3">Manual</th>
                         <th className="p-3">Result</th>
@@ -299,12 +305,12 @@ export default function AdminDashboard() {
                             {new Date(r.dateTaken).toLocaleDateString()}
                           </td>
                           <td className="p-3 font-mono">{r.typing.wpm}</td>
-                          <td className="p-3 font-mono opacity-80">{r.categories.responseTime}</td>
                           <td className="p-3 font-mono opacity-80">{r.categories.grammar}</td>
-                          <td className="p-3 font-mono opacity-80">{r.categories.professionalTone}</td>
-                          <td className="p-3 font-mono opacity-80">{r.categories.accuracy}</td>
-                          <td className="p-3 font-mono opacity-80">{r.categories.conversationManagement}</td>
-                          <td className="p-3 font-mono opacity-80">{r.categories.prioritization}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.typingSpeed}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.responseSpeed}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.professionalism}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.tone}</td>
+                          <td className="p-3 font-mono opacity-80">{r.categories.empathy}</td>
                           <td className="p-3 font-mono font-semibold">{r.overall}</td>
                           <td className="p-3 font-mono">
                             {r.manualScore != null ? (

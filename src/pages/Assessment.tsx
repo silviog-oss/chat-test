@@ -96,27 +96,25 @@ export default function Assessment() {
     try {
       // brief pause so the scoring screen registers (scoring itself is instant)
       await new Promise((r) => setTimeout(r, 900));
+      const typing = typingRef.current!;
       const { categories, feedback } = scoreAssessment({
         transcripts: data.transcripts,
         responseTimesMs: data.responseTimesMs,
         firstReplyOrder: data.firstReplyOrder,
         priorityById: data.priorityById,
+        typingWpm: typing.wpm,
+        typingAccuracy: typing.accuracy,
       });
 
       const catTotal =
-        categories.responseTime +
         categories.grammar +
-        categories.professionalTone +
-        categories.accuracy +
-        categories.conversationManagement +
-        categories.prioritization;
+        categories.typingSpeed +
+        categories.responseSpeed +
+        categories.professionalism +
+        categories.tone +
+        categories.empathy;
 
-      const typing = typingRef.current!;
-      const typingPass =
-        typing.wpm >= PASS_THRESHOLDS.minWpm &&
-        typing.accuracy >= PASS_THRESHOLDS.minAccuracy;
-      const passed =
-        catTotal >= PASS_THRESHOLDS.minOverall && typingPass;
+      const passed = catTotal >= PASS_THRESHOLDS.minOverall;
 
       const result: AssessmentResult = {
         uid: user.uid,

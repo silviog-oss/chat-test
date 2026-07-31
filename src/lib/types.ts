@@ -20,21 +20,21 @@ export interface TypingResult {
 }
 
 export interface CategoryScores {
-  responseTime: number; // /20
-  grammar: number; // /10
-  professionalTone: number; // /15
-  accuracy: number; // /20
-  conversationManagement: number; // /20
-  prioritization: number; // /15
+  grammar: number; // /17
+  typingSpeed: number; // /17
+  responseSpeed: number; // /17
+  professionalism: number; // /17
+  tone: number; // /16
+  empathy: number; // /16
 }
 
 export interface AiFeedback {
-  professionalism: string;
   grammar: string;
+  typingSpeed: string;
+  responseSpeed: string;
+  professionalism: string;
+  tone: string;
   empathy: string;
-  problemSolving: string;
-  accuracy: string;
-  conversationManagement: string;
   summary: string;
 }
 
