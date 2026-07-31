@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Logo } from '../components/ui';
-import { DURATIONS, PASS_THRESHOLDS } from '../lib/config';
+import { DURATIONS, PASS_THRESHOLDS, APP_VERSION } from '../lib/config';
 
 export default function Landing() {
   const { user, signIn, isAdmin } = useAuth();
@@ -162,8 +162,13 @@ export default function Landing() {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 text-sm text-muted">
           <span>Chatline — Bizee Customer Support Assessment</span>
-          <span>
-            powered by <span className="font-semibold text-primary">bizee</span>
+          <span className="flex items-center gap-3">
+            <span className="rounded-full bg-canvas px-2 py-0.5 font-mono text-xs">
+              {APP_VERSION}
+            </span>
+            <span>
+              powered by <span className="font-semibold text-primary">bizee</span>
+            </span>
           </span>
         </div>
       </footer>

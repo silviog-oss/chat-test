@@ -98,8 +98,8 @@ export const PERSONAS: CustomerPersona[] = [
         nudge: 'so is there any update on the EIN?',
       },
       {
-        // Step 2: agent answers the name question / asks for details.
-        advance: (s) => s.askedInfo || s.wordCount >= 4,
+        // Step 2: agent answers the name question / asks for the details.
+        advance: (s) => s.askedInfo || s.wordCount >= 6,
         onAdvance: 'ok here is the information\nJONATHAN ALEXANDER GUZMAN  646-20-9310',
         nudge: 'should i give you the full middle name or track it down?',
       },
@@ -186,7 +186,7 @@ export const PERSONAS: CustomerPersona[] = [
         nudge: 'Could you please help with the document members issue?',
       },
       {
-        advance: (s) => s.askedInfo || s.wordCount >= 4,
+        advance: (s) => s.askedInfo || s.wordCount >= 6,
         onAdvance:
           'The current members should be: Ahmed Elsayed Youssef Youssef Ali, Mohamad Ramiz Youssef Qadi, Waleed Abdelmageed Abdelhameed Sobeah, Ramzi Youssef Hamza Qadi. But the downloadable Operating Agreement still lists the old ones.',
         nudge: 'What information do you need from me?',
@@ -226,65 +226,132 @@ export const TIMED_EVENTS: TimedEvent[] = [
 // Signal detection.
 // ---------------------------------------------------------------------------
 export function detectSignals(text: string): ReplySignals {
-  const t = text.toLowerCase();
+  const t = ' ' + text.toLowerCase().replace(/\s+/g, ' ').trim() + ' ';
   const has = (arr: string[]) => arr.some((w) => t.includes(w));
+
+  const askedVerification = has([
+    'last 4', 'last four', 'last 4 digits', 'last four digits', 'four digits',
+    '4 digits', 'card on file', 'primary card', 'card ending', 'card number',
+    'order number', 'order #', 'order id', 'order no', 'your order',
+    'verify your account', 'verify the account', 'verify your identity',
+    'to verify', 'for verification', 'confirm your account',
+    'digits of the', 'digits of your', 'company name and the last',
+    'account number', 'reference number', 'confirmation number',
+  ]);
+
+  const askedInfo = has([
+    'please provide', 'could you provide', 'can you provide', 'kindly provide',
+    'please share', 'could you share', 'can you share', 'please send',
+    'could you send', 'can you send', 'send me', 'reply with', 'respond with',
+    'provide the following', 'provide me with', 'provide us with',
+    'full name', 'your full name', 'full ssn', 'social security',
+    'ssn', 'as it appears', 'as shown on', 'exactly as', 'middle name',
+    'what is your', "what's your", 'may i have', 'can i have', 'i need your',
+    'i will need', 'let me know your', 'confirm the', 'confirm that',
+    'please confirm', 'could you confirm', 'can you confirm',
+  ]);
+
+  const askedSsnRisk = has([
+    'duplicate', 'duplicate filing', 'mismatch', 'irs', 'same result',
+    'risk', 'authorize us', 'authorize', 'inaccurate', 'second attempt',
+    'another attempt', 'another application', 'file again', 'refile',
+    're-file', 'may return the same', 'no control over', 'potential risk',
+    'acknowledge',
+  ]);
+
+  const mentionedEscalation = has([
+    'escalate', 'escalating', 'escalation', 'department', 'the team',
+    'our team', 'follow up', 'follow-up', 'forward this', 'forward it',
+    'raise this', 'raise it', 'submit another', 'file another',
+    'send this over', 'pass this', 'pass it', 'get this to', 'reach out to',
+    'i will submit', "i'll submit", 'i will file', "i'll file",
+    'looking into', 'look into', 'check on this', 'check this for you',
+  ]);
+
+  const gaveTimeframe = has([
+    '1-2 business', '1 to 2 business', '1 or 2 business', 'one to two business',
+    'business day', 'business days', '24 hours', '48 hours', '72 hours',
+    'within', 'in a few', 'couple of days', 'a couple days', 'shortly',
+    'by end of', 'by the end', 'soon', 'today', 'tomorrow', 'this week',
+    'next few days', 'as soon as', 'asap', 'momentarily',
+  ]);
+
+  const mentionedEmail = has([
+    'email on file', 'send it to the email', 'send to the email',
+    'by email', 'via email', 'over email', 'through email', 'send you the',
+    "we'll email", 'we will email', "i'll email", 'i will email',
+    'to your email', 'email you', 'emailed to you', 'sent to your email',
+    'follow up with you via email', 'update you by email', 'reach you by email',
+  ]);
+
+  const mentionedFees = has([
+    'registered agent', '149', '$149', 'per year', '/year', 'a year',
+    'yearly', 'annual', 'annually', 'one-time', 'one time', 'single payment',
+    'virtual address', '$29', '29/month', 'domain', 'renewal', 'renew',
+    'no recurring', 'free the first', 'free for the first', 'first year free',
+    'no yearly', 'no annual fee', 'compliance', 'state fee', 'filing fee',
+  ]);
+
+  const mentionedVyde = has([
+    'vyde', 'tax consultation', 'consultation', 'tax consult', 'tax advisor',
+    'tax professional', 'third party', 'third-party', '30-minute', '30 minute',
+    'thirty minute', 'tax service', 'tax-related', 'we do not assist with tax',
+    "don't assist with tax", 'do not handle tax', 'we partner', 'partnership',
+  ]);
+
+  const mentionedBanks = has([
+    'relay', 'bank of america', 'boa', 'bank account', 'banks', 'bank',
+    'apply with them', 'open an account', 'business account', 'checking account',
+    'financial institution',
+  ]);
+
+  const mentionedWyoming = has([
+    'wyoming', 'articles of organization', 'not list', 'does not list',
+    "doesn't list", 'not listed', 'operating agreement', 'statement of the organizer',
+    'internal template', 'internal document', 'member information',
+    'members are not', 'not shown on', 'not on the articles',
+  ]);
+
+  const greeted = has([
+    'hi ', 'hi!', 'hi.', 'hi,', 'hello', 'hey', 'good morning',
+    'good afternoon', 'good evening', 'thank you for contacting',
+    'thanks for contacting', 'thanks for reaching', 'thank you for reaching',
+    'welcome', 'how can i help', 'how may i help', 'how can i assist',
+    'how may i assist', 'happy to help', 'glad to help',
+  ]);
+
+  const empathy = has([
+    'understand', 'i see', 'i hear you', 'that must', 'frustrat', 'frustrating',
+    'sorry to hear', 'sorry for', 'apologi', 'i know how', 'i realize',
+    'appreciate your patience', 'thanks for your patience',
+    'thank you for your patience', 'thank you for waiting', 'thanks for waiting',
+    'no worries', 'not a problem', "i'd be happy", 'i would be happy',
+    'rest assured', 'i completely understand', 'totally understand',
+  ]);
+
+  const closing = has([
+    'anything else', 'is there anything', 'anything more', 'anything further',
+    'have a great', 'have a good', 'have a wonderful', 'have a nice',
+    'glad i could', 'happy i could', 'happy to have', 'take care',
+    'this chat will now end', 'this chat will end', 'concluding this chat',
+    'conclude this chat', 'thank you for chatting', 'wishing you', 'all the best',
+    'is that all',
+  ]);
+
   return {
-    greeted: has([
-      'hi ', 'hello', 'hey', 'good morning', 'good afternoon',
-      'thank you for contacting', 'thanks for reaching', 'welcome',
-    ]),
-    empathy: has([
-      'understand', 'i see', 'i hear you', 'that must', 'frustrat',
-      'sorry to hear', 'apologi', 'i know how', 'appreciate your patience',
-      'thanks for your patience', 'happy to help', 'glad',
-    ]),
-    askedVerification: has([
-      'last 4', 'last four', 'card on file', 'primary card',
-      'order number', 'order #', 'verify your account', 'verify the account',
-      'digits of the', 'last 4 digits', 'four digits',
-    ]),
-    askedInfo: has([
-      'please provide', 'could you provide', 'can you provide', 'reply with',
-      'full name', 'full ssn', 'social security', 'confirm the', 'confirm that',
-      'send me', 'provide the following', 'what is your', "what's your",
-    ]),
-    mentionedEscalation: has([
-      'escalate', 'escalating', 'department', 'follow up', 'follow-up',
-      'forward this', 'raise this', 'submit another application', 'file another',
-    ]),
-    gaveTimeframe: has([
-      '1-2 business', '1 or 2 business', 'business day', 'business days',
-      '24 hours', '48 hours', 'within', 'shortly', 'by end of', 'today',
-      'tomorrow',
-    ]),
-    mentionedEmail: has([
-      'email on file', 'send it to the email', 'by email', 'via email',
-      'send you the', "we'll email", 'we will email', 'to your email',
-      'follow up with you via email',
-    ]),
-    mentionedFees: has([
-      'registered agent', '149', '$149', 'per year', '/year', 'one-time',
-      'one time', 'virtual address', '$29', 'domain', 'renewal', 'annual',
-    ]),
-    mentionedVyde: has([
-      'vyde', 'tax consultation', 'consultation', 'third party', 'third-party',
-      '30-minute', '30 minute',
-    ]),
-    mentionedBanks: has([
-      'relay', 'bank of america', 'bank account', 'banks', 'apply with them',
-    ]),
-    mentionedWyoming: has([
-      'wyoming', 'articles of organization', 'not list', 'operating agreement',
-      'statement of the organizer', 'internal template', 'does not list',
-    ]),
-    askedSsnRisk: has([
-      'duplicate', 'mismatch', 'irs', 'same result', 'risk', 'authorize',
-      'inaccurate', 'second attempt',
-    ]),
-    closing: has([
-      'anything else', 'is there anything', 'have a great', 'have a good',
-      'glad i could', 'happy to help', 'take care', 'this chat will now end',
-    ]),
+    greeted,
+    empathy,
+    askedVerification,
+    askedInfo,
+    mentionedEscalation,
+    gaveTimeframe,
+    mentionedEmail,
+    mentionedFees,
+    mentionedVyde,
+    mentionedBanks,
+    mentionedWyoming,
+    askedSsnRisk,
+    closing,
     wordCount: text.trim().split(/\s+/).filter(Boolean).length,
   };
 }

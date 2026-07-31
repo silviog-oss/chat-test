@@ -5,9 +5,11 @@
 // changes the UI; it does not grant real access on its own. Keep this list in
 // sync with firestore.rules.
 export const ADMIN_EMAILS: string[] = [
-  'Diana.o@incfile.com',
+  'diana.o@incfile.com',
   'silvio.g@incfile.com',
 ];
+
+export const APP_VERSION = 'v6.0.1';
 
 export const PASS_THRESHOLDS = {
   minWpm: 45,

@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Spinner } from './components/ui';
+import { APP_VERSION } from './lib/config';
 import Landing from './pages/Landing';
 import Assessment from './pages/Assessment';
 import CandidateDashboard from './pages/CandidateDashboard';
@@ -30,6 +31,10 @@ export default function App() {
     <AuthProvider>
       {/* HashRouter avoids GitHub Pages deep-link 404s entirely */}
       <HashRouter>
+        {/* Global version badge — confirms which build is live */}
+        <span className="pointer-events-none fixed bottom-2 right-2 z-50 rounded-full bg-ink/70 px-2 py-0.5 font-mono text-[10px] text-white/90">
+          {APP_VERSION}
+        </span>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route
