@@ -212,13 +212,18 @@ export function scoreAssessment(input: ScoreInput): ScoreResult {
       conversationManagement >= 14
         ? 'Kept multiple chats moving and drove several to resolution.'
         : 'Some conversations were left unattended or unresolved.',
-    summary: buildSummary(categories, lateReplies),
+    summary: buildSummary(categories, lateReplies, avgSec, responseTimesMs.length),
   };
 
   return { categories, feedback };
 }
 
-function buildSummary(c: CategoryScores, lateReplies: number): string {
+function buildSummary(
+  c: CategoryScores,
+  lateReplies: number,
+  avgSec: number,
+  replyCount: number
+): string {
   const total =
     c.responseTime +
     c.grammar +
@@ -248,5 +253,9 @@ function buildSummary(c: CategoryScores, lateReplies: number): string {
     lateReplies > 0
       ? ` Note: ${lateReplies} repl${lateReplies === 1 ? 'y' : 'ies'} exceeded the 4-minute limit (−${lateReplies * 3} to response time).`
       : '';
-  return `Overall ${total}/100 — ${band}. Weakest area was ${weakest}; focus coaching there.${lateNote} Scores are computed from measured response times and rule-based checks on the transcript.`;
+  const avgNote =
+    replyCount > 0
+      ? ` Average response time: ${Math.round(avgSec)}s across ${replyCount} repl${replyCount === 1 ? 'y' : 'ies'} (target: under 4 minutes per reply).`
+      : '';
+  return `Overall ${total}/100 — ${band}. Weakest area was ${weakest}; focus coaching there.${avgNote}${lateNote} Scores are computed from measured response times and rule-based checks on the transcript.`;
 }

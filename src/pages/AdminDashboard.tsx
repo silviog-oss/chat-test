@@ -290,7 +290,8 @@ export default function AdminDashboard() {
                       {filtered.map((r) => (
                         <tr
                           key={r.uid}
-                          className="border-b border-line/40 hover:bg-line/10"
+                          onClick={() => setSelected(r)}
+                          className="cursor-pointer border-b border-line/40 hover:bg-line/10"
                         >
                           <td className="p-3 font-medium">{r.name}</td>
                           <td className="p-3 opacity-70">{r.email}</td>
@@ -333,13 +334,19 @@ export default function AdminDashboard() {
                           </td>
                           <td className="p-3 text-right">
                             <button
-                              onClick={() => setSelected(r)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelected(r);
+                              }}
                               className="mr-2 text-primary hover:underline"
                             >
                               View
                             </button>
                             <button
-                              onClick={() => onDelete(r)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(r);
+                              }}
                               className="text-bad hover:underline"
                             >
                               Delete

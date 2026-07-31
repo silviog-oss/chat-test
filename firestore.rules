@@ -3,11 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Keep this list in sync with src/lib/config.ts and the function origin.
-      function isAdmin() {
+    function isAdmin() {
       return request.auth != null &&
         request.auth.token.email in [
-          'diana.o@incfile.com',
-          'silvio.g@incfile.com'
+          'admin@yourcompany.com'
+          // , 'second.admin@yourcompany.com'
         ];
     }
 

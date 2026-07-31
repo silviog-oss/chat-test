@@ -5,6 +5,8 @@ export interface ReplySignals {
   greeted: boolean;
   empathy: boolean;
   askedVerification: boolean;
+  askedBillingAddress: boolean; // KB step 3
+  askedLastCharge: boolean; // KB step 4
   askedInfo: boolean;
   mentionedEscalation: boolean;
   gaveTimeframe: boolean;
@@ -239,6 +241,15 @@ export function detectSignals(text: string): ReplySignals {
     'account number', 'reference number', 'confirmation number',
   ]);
 
+  const askedBillingAddress = has([
+    'billing address', 'full billing', 'address on file', 'billing zip',
+    'mailing address',
+  ]);
+  const askedLastCharge = has([
+    'last charge', 'amount and date', 'amount of the last', 'date of the last',
+    'recent charge', 'last payment', 'last transaction',
+  ]);
+
   const askedInfo = has([
     'please provide', 'could you provide', 'can you provide', 'kindly provide',
     'please share', 'could you share', 'can you share', 'please send',
@@ -342,6 +353,8 @@ export function detectSignals(text: string): ReplySignals {
     greeted,
     empathy,
     askedVerification,
+    askedBillingAddress,
+    askedLastCharge,
     askedInfo,
     mentionedEscalation,
     gaveTimeframe,
