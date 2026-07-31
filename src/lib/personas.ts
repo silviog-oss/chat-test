@@ -25,7 +25,7 @@ export interface ReplySignals {
 // Each scenario is an ordered list of steps. A step has:
 //   - advance(signals): did the agent's reply satisfy THIS step?
 //   - onAdvance: what the customer says when moving to the next step.
-//   - nudge: what the customer says if the agent's reply did NOT satisfy the
+//   - nudges: varied re-prompts if the agent reply did NOT satisfy the step
 //     step (a gentle re-prompt), so the conversation never "bugs out".
 // The customer advances exactly ONE step per qualifying agent reply and can
 // never skip or repeat, which keeps replies consistent.
@@ -33,7 +33,9 @@ export interface ReplySignals {
 export interface Step {
   advance: (s: ReplySignals) => boolean;
   onAdvance: string;
-  nudge: string;
+  // One or more re-prompt lines. If the agent's reply doesn't satisfy the
+  // step, the customer cycles through these (varied, not the same line looped).
+  nudges: string[];
 }
 
 export interface CustomerPersona {
@@ -90,32 +92,54 @@ export const PERSONAS: CustomerPersona[] = [
         // Step 0: agent should verify the account.
         advance: (s) => s.askedVerification,
         onAdvance: '226061005859  7856',
-        nudge: 'i just want an update on my EIN please',
+        nudges: [
+          'i just want an update on my EIN please',
+          'can you check the status of my EIN?',
+          'sorry, i just need to know where my EIN is at',
+        ],
       },
       {
         // Step 1: agent explains the SSN second attempt WITH the risk note.
+        // If the agent instead CLAIMS it's already obtained / in the dashboard,
+        // the customer pushes back (the premise is it was NOT received).
         advance: (s) => s.askedSsnRisk || s.askedInfo,
         onAdvance:
           'if i dont know if it has my middle initial or full middle name is it best to just give you the full middle name?',
-        nudge: 'so is there any update on the EIN?',
+        nudges: [
+          "but i never got the EIN — it's not in my dashboard under completed documents",
+          "i already checked the dashboard and there's no EIN there",
+          "are you sure? i don't see any EIN on my account",
+          'so what actually happened with the filing then?',
+        ],
       },
       {
         // Step 2: agent answers the name question / asks for the details.
         advance: (s) => s.askedInfo || s.wordCount >= 6,
         onAdvance: 'ok here is the information\nJONATHAN ALEXANDER GUZMAN  646-20-9310',
-        nudge: 'should i give you the full middle name or track it down?',
+        nudges: [
+          'should i give you the full middle name or track it down?',
+          'do you need my full name or the SSN?',
+          'let me know exactly what info you need from me',
+        ],
       },
       {
         // Step 3: agent escalates / gives a timeframe.
         advance: (s) => s.mentionedEscalation || s.gaveTimeframe,
         onAdvance: 'thank you, when will i receive the email?',
-        nudge: 'did you get my information?',
+        nudges: [
+          'did you get my information?',
+          'so what happens next?',
+          'is this being submitted now?',
+        ],
       },
       {
         // Step 4: agent confirms email/timeframe -> customer wraps up.
         advance: (s) => s.gaveTimeframe || s.mentionedEmail || s.closing,
         onAdvance: 'thats everything, thank you',
-        nudge: 'how long until i hear back?',
+        nudges: [
+          'how long until i hear back?',
+          'when should i expect the update?',
+        ],
       },
     ],
   },
@@ -138,20 +162,31 @@ export const PERSONAS: CustomerPersona[] = [
         // Step 0: agent explains fees.
         advance: (s) => s.mentionedFees,
         onAdvance: 'ok thanks',
-        nudge: 'so what would the yearly cost actually be?',
+        nudges: [
+          'so what would the yearly cost actually be?',
+          'i just need to know the yearly fee',
+          'can you tell me the annual cost?',
+        ],
       },
       {
         // Step 1: customer asks the banking + tax follow-up.
         advance: (s) => s.wordCount >= 3 || s.closing,
         onAdvance:
           'what types of bank accounts can i open with the LLC and how much tax do i have to pay for income?',
-        nudge: 'i also had another question',
+        nudges: [
+          'i also had another question',
+          'one more thing actually',
+        ],
       },
       {
         // Step 2: agent covers banks (Relay/BoA) and/or Vyde tax consult.
         advance: (s) => s.mentionedBanks || s.mentionedVyde,
         onAdvance: 'not at the moment thanks',
-        nudge: 'so which banks can i use, and what about taxes?',
+        nudges: [
+          'so which banks can i use, and what about taxes?',
+          'what about the bank accounts and the tax side?',
+          'can you answer the banking and tax question?',
+        ],
       },
     ],
     impatient: {
@@ -185,26 +220,39 @@ export const PERSONAS: CustomerPersona[] = [
         advance: (s) => s.askedVerification,
         onAdvance:
           'Order number 226060401230, card ending 8830. Company: HORIZON GLOBAL TRADING LLC.',
-        nudge: 'Could you please help with the document members issue?',
+        nudges: [
+          'Could you please help with the document members issue?',
+          'The downloaded documents still list the wrong members.',
+          'I need the member list on my documents corrected.',
+        ],
       },
       {
         advance: (s) => s.askedInfo || s.wordCount >= 6,
         onAdvance:
           'The current members should be: Ahmed Elsayed Youssef Youssef Ali, Mohamad Ramiz Youssef Qadi, Waleed Abdelmageed Abdelhameed Sobeah, Ramzi Youssef Hamza Qadi. But the downloadable Operating Agreement still lists the old ones.',
-        nudge: 'What information do you need from me?',
+        nudges: [
+          'What information do you need from me?',
+          'Let me know what details you need to fix this.',
+        ],
       },
       {
         // agent explains Wyoming rule and/or offers email.
         advance: (s) => s.mentionedWyoming || s.mentionedEmail,
         onAdvance:
           'Thank you very much. I will wait for the updated documents by email.',
-        nudge:
+        nudges: [
           'I already refreshed and cleared cache on a laptop, and the download still shows the old members.',
+          'I have tried re-downloading — it still shows the previous members.',
+          'So how will the corrected documents reach me?',
+        ],
       },
       {
         advance: (s) => s.mentionedEmail || s.closing,
         onAdvance: 'Thank you for your assistance.',
-        nudge: 'Could you confirm the corrected documents will be sent?',
+        nudges: [
+          'Could you confirm the corrected documents will be sent?',
+          'Will I receive the updated version?',
+        ],
       },
     ],
   },

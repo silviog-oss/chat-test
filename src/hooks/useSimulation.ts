@@ -16,6 +16,7 @@ export interface Conversation {
   resolved: boolean;
   typing: boolean;
   stepIndex: number; // which scenario step we're waiting on
+  nudgeIndex: number; // which varied nudge line to use next
   frustration: number; // impatience escalation counter
   lastActivityTs: number; // last message either side, for impatience timing
 }
@@ -41,6 +42,7 @@ export function useSimulation(active: boolean) {
         resolved: false,
         typing: false,
         stepIndex: 0,
+        nudgeIndex: 0,
         frustration: 0,
         lastActivityTs: Date.now(),
       };
@@ -196,16 +198,21 @@ export function useSimulation(active: boolean) {
         const current = steps[c.stepIndex];
         let reply: string;
         let nextStep = c.stepIndex;
+        let nextNudge = c.nudgeIndex;
         let resolved = false;
 
         if (current && current.advance(signals)) {
           // Agent satisfied this step -> customer advances and says the line.
           reply = current.onAdvance;
           nextStep = c.stepIndex + 1;
+          nextNudge = 0; // reset nudge cycle for the new step
           if (nextStep >= steps.length) resolved = true;
         } else if (current) {
-          // Not satisfied -> gentle re-prompt (never a random wrong line).
-          reply = current.nudge;
+          // Not satisfied -> cycle through the varied re-prompts so the same
+          // line is never repeated back-to-back.
+          const list = current.nudges;
+          reply = list[c.nudgeIndex % list.length];
+          nextNudge = c.nudgeIndex + 1;
         } else {
           // No steps left; treat as resolved.
           reply = '';
@@ -222,6 +229,7 @@ export function useSimulation(active: boolean) {
             ...c,
             typing: false,
             stepIndex: nextStep,
+            nudgeIndex: nextNudge,
             resolved,
             turns,
             unread: reply ? c.unread + 1 : c.unread,
