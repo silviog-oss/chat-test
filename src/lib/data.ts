@@ -76,3 +76,19 @@ export async function deleteResult(uid: string): Promise<void> {
   await deleteDoc(doc(db, 'results', uid));
   await deleteDoc(doc(db, 'attempts', uid));
 }
+
+// Admin writes a manual grade onto a result. Admin-only per Firestore rules.
+export async function updateManualGrade(
+  uid: string,
+  grade: {
+    manualScore: number | null;
+    manualVerdict: 'pass' | 'fail' | null;
+    manualNotes: string;
+    manualGradedBy: string;
+  }
+): Promise<void> {
+  await updateDoc(doc(db, 'results', uid), {
+    ...grade,
+    manualGradedAt: Date.now(),
+  });
+}

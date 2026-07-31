@@ -10,7 +10,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
-import { getAllResults, deleteResult } from '../lib/data';
+import { getAllResults, deleteResult, updateManualGrade } from '../lib/data';
 import { AssessmentResult } from '../lib/types';
 import { Logo, Spinner, Stat, Card } from '../components/ui';
 import ScoreReport from '../components/ScoreReport';
@@ -169,7 +169,22 @@ export default function AdminDashboard() {
             >
               ← Back to all candidates
             </button>
-            <ScoreReport r={selected} />
+            <ScoreReport
+              r={selected}
+              adminEmail={user?.email ?? ''}
+              onSaveGrade={async (grade) => {
+                await updateManualGrade(selected.uid, grade);
+                const updated = {
+                  ...selected,
+                  ...grade,
+                  manualGradedAt: Date.now(),
+                };
+                setSelected(updated);
+                setRows((prev) =>
+                  prev.map((x) => (x.uid === updated.uid ? updated : x))
+                );
+              }}
+            />
           </>
         ) : (
           <>
@@ -266,6 +281,7 @@ export default function AdminDashboard() {
                         <th className="p-3" title="Conversation management /20">Conv</th>
                         <th className="p-3" title="Prioritization /15">Prio</th>
                         <th className="p-3">Overall</th>
+                        <th className="p-3">Manual</th>
                         <th className="p-3">Result</th>
                         <th className="p-3"></th>
                       </tr>
@@ -289,6 +305,23 @@ export default function AdminDashboard() {
                           <td className="p-3 font-mono opacity-80">{r.categories.conversationManagement}</td>
                           <td className="p-3 font-mono opacity-80">{r.categories.prioritization}</td>
                           <td className="p-3 font-mono font-semibold">{r.overall}</td>
+                          <td className="p-3 font-mono">
+                            {r.manualScore != null ? (
+                              <span
+                                className={
+                                  r.manualVerdict === 'pass'
+                                    ? 'text-good'
+                                    : r.manualVerdict === 'fail'
+                                      ? 'text-bad'
+                                      : ''
+                                }
+                              >
+                                {r.manualScore}
+                              </span>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
                           <td className="p-3">
                             <span
                               className={

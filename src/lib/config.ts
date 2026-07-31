@@ -9,7 +9,7 @@ export const ADMIN_EMAILS: string[] = [
   'silvio.g@incfile.com',
 ];
 
-export const APP_VERSION = 'v6.0.1';
+export const APP_VERSION = 'v6.0.2';
 
 export const PASS_THRESHOLDS = {
   minWpm: 45,

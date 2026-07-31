@@ -99,15 +99,27 @@ export function useSimulation(active: boolean) {
         if (!c.joined || c.resolved || busy.current.has(id)) continue;
         const imp = c.persona.impatient;
         if (!imp) continue;
-        // Only nudge if the customer is the one waiting (last msg is theirs).
+        // Only nudge if the customer is currently WAITING on the agent:
+        // the last message in the thread must be the customer's.
         const last = c.turns[c.turns.length - 1];
         if (!last || last.role !== 'customer') continue;
-        const silent = (Date.now() - c.lastActivityTs) / 1000;
-        // Escalation threshold first (angrier), then plain nudge.
-        if (silent >= imp.escalateAfterSeconds) {
-          emitImpatience(id, true);
-        } else if (silent >= imp.nudgeAfterSeconds && c.frustration === 0) {
-          emitImpatience(id, false);
+        // Measure silence since the AGENT's last message (or join if none).
+        const lastAgent = [...c.turns].reverse().find((t) => t.role === 'agent');
+        const sinceAgent =
+          (Date.now() - (lastAgent ? lastAgent.ts : c.lastActivityTs)) / 1000;
+        // Escalation ladder: one message per threshold crossed, and never more
+        // nudges than we have lines for. `frustration` counts nudges already
+        // sent for THIS silence; it resets to 0 whenever the agent replies.
+        const maxNudges = imp.angryLines.length + 1; // 1 gentle + N angry
+        if (c.frustration >= maxNudges) continue;
+        // First nudge at nudgeAfterSeconds; each subsequent one requires an
+        // additional escalate interval of further silence.
+        const nextThreshold =
+          c.frustration === 0
+            ? imp.nudgeAfterSeconds
+            : imp.escalateAfterSeconds * c.frustration;
+        if (sinceAgent >= nextThreshold) {
+          emitImpatience(id, c.frustration > 0);
         }
       }
     }, 3000);
@@ -122,24 +134,23 @@ export function useSimulation(active: boolean) {
       const c = prev[personaId];
       const imp = c.persona.impatient!;
       let line: string;
-      let frustration = c.frustration;
-      if (escalate) {
-        const idx = Math.min(frustration, imp.angryLines.length - 1);
-        line = imp.angryLines[idx];
-        frustration = Math.min(frustration + 1, imp.angryLines.length);
-      } else {
+      // frustration 0 -> gentle nudge; 1+ -> angry lines by index.
+      if (!escalate) {
         line = imp.nudgeLine;
-        frustration = Math.max(frustration, 1);
+      } else {
+        const idx = Math.min(c.frustration - 1, imp.angryLines.length - 1);
+        line = imp.angryLines[idx];
       }
       busy.current.delete(personaId);
       return {
         ...prev,
         [personaId]: {
           ...c,
-          frustration,
+          frustration: c.frustration + 1,
           turns: [...c.turns, { role: 'customer', text: line, ts: Date.now() }],
           unread: c.unread + 1,
-          lastActivityTs: Date.now(),
+          // NOTE: do NOT reset lastActivityTs here; silence is measured from
+          // the agent's last message, so a nudge can't retrigger itself.
         },
       };
     });

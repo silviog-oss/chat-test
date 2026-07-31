@@ -50,6 +50,13 @@ export interface AssessmentResult {
   transcripts: ConversationTranscript[];
   timeSpentSeconds: number;
   passed: boolean;
+  // Optional manual grade entered by an admin after reading the transcript.
+  // The automated score is a first pass; this is the human's real verdict.
+  manualScore?: number | null; // 0-100
+  manualNotes?: string;
+  manualVerdict?: 'pass' | 'fail' | null;
+  manualGradedBy?: string; // admin email
+  manualGradedAt?: number; // epoch ms
 }
 
 export type AttemptStatus = 'in_progress' | 'completed';
